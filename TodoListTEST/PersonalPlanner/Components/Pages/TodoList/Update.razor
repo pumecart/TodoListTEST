@@ -1,0 +1,93 @@
+@page "/Todos/Update"
+@using MongoDB.Driver
+@inject PersonalPlanner.Data.MongoDBContext DB
+@inject NavigationManager NavigationManager
+@inject MongoDBContext dbContext
+
+<PageTitle>Update</PageTitle>
+
+<h1>Update To-Do Task</h1>
+
+<h4>To-Do Task</h4>
+<hr />
+@if (Todo is null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="row">
+        <div class="col-md-4">
+            <EditForm Model="Todo" OnValidSubmit="UpdateTodo">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+                <input type="hidden" name="Todo.Id" value="@Todo.Id" />
+                <div class="mb-3">
+                    <label for="title" class="form-label">To-Do Task:</label>
+                    <InputText id="title" @bind-Value="Todo.Todo" class="form-control" />
+                    <ValidationMessage For="() => Todo.Todo" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="DueDate" class="form-label">Due Date:</label>
+                    <InputDate id="DueDate" @bind-Value="Todo.DueDate" class="form-control" />
+                    <ValidationMessage For="() => Todo.DueDate" class="text-danger" />
+                </div>
+                <button type="submit" class="btn btn-primary">Save</button>
+            </EditForm>
+        </div>
+    </div>
+}
+
+<div>
+    <a href="/Todos">Back to List</a>
+</div>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    public TodoTask? Todo { get; set; } = new ();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Id == 0)
+        {
+            NavigationManager.NavigateTo("/Todos");
+            return;
+        }
+
+        var filter = Builders<TodoTask>.Filter.Eq(t => t.Id, Todo?.Id);
+        Todo = await DB.Todo.Find(filter).FirstOrDefaultAsync();
+
+        if (Todo == null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+    }
+
+    @* public async Task UpdateTodo()
+    {
+        if (Todo == null) return;
+
+        var filter = Builders<TodoTask>.Filter.Eq(t => t.Id, Todo.Id);
+        var updateTodo = await DB.Todo.ReplaceOneAsync(filter, Todo);
+
+        if (updateTodo.MatchedCount == 0)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+        else
+        {
+            NavigationManager.NavigateTo("/Todos");
+        }
+    } *@
+
+    private async Task UpdateTodo()
+    {
+        var todoCollection = dbContext.Todo;
+
+        var existingTodo = await todoCollection.Find(t => t.todo == Todo.Todo).FirstOrDefaultAsync();
+
+        await todoCollection.InsertOneAsync(Todo);
+    }
+}
